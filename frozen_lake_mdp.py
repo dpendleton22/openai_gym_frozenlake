@@ -19,7 +19,9 @@ import random
 import QLearner as ql
 from gym.envs.toy_text import frozen_lake
 
-state_map = {'S': 0, 'F': 0, 'H': -1, 'G':10}
+from time import time
+
+state_map = {'S': 0, 'F': 0, 'H': -1, 'G':1}
 
 frozen_lake.MAPS['16x16'] = [
         "SFFFFFFFHFFFFFFF",
@@ -172,7 +174,7 @@ class value_iteration_mdp():
         value: array
         """
         #Create a utility function of the environment shape
-        gamma = 0.9
+        gamma = 0.999
         epsilon = 0.01
         iteration = 0
 
@@ -196,6 +198,7 @@ class value_iteration_mdp():
             iteration += 1
             u = u_copy.copy()
             graph_list.append(u)
+            start_time = time()
             for s in range(self.env.observation_space.n):
                 r = reward[s]
                 v = np.zeros((1, self.env.observation_space.n), dtype=float)
@@ -210,6 +213,7 @@ class value_iteration_mdp():
                 print("Delta: " + str(delta))
                 print("Gamma: " + str(gamma))
                 print("Epsilon: " + str(epsilon))
+                print("Time to converge: {} seconds".format(time() - start_time))
                 print("===================================================")
                 utility_reshape = np.reshape(u, (int(np.sqrt(self.env.observation_space.n)), int(np.sqrt(self.env.observation_space.n))))
                 print (np.array(utility_reshape, dtype=float))
@@ -282,7 +286,7 @@ class value_iteration_mdp():
                 else:
                     action = policy[observation]
                 tot_reward += reward
-        print('Total Reward: {}'.format(tot_reward))
+        print('Average Reward: {}'.format(tot_reward/100))
         return tot_reward
 
 class policy_iteration():
@@ -432,25 +436,26 @@ class policy_iteration():
         print(policy_string)
 
     def execute_policy_iteration(self):
-        gamma = 0.9
+        gamma = 0.999
         epsilon = 0.01
         iteration = 0
         T = self.frozen_transition()
 
         reward = np.array([state_map.get(sublist) for state in frozen_lake.MAPS[self.env.spec._kwargs.get('map_name')] for sublist in state], dtype=float)
 
-        reward[np.where(reward==1)] = 10
+        # reward[np.where(reward==1)] = 10
 
         # Generate the first policy randomly
         # NaN=Nothing, -1=Terminal, 0=Up, 1=Left, 2=Down, 3=Right
         p = np.random.randint(2, 3, size=(self.env.observation_space.n)).astype(np.float32)
-        p[np.where(reward==-1) or np.where(reward==10)] = -1
+        p[np.where(reward==-1) or np.where(reward==1)] = -1
         # Utility vectors
         u = np.zeros(self.env.observation_space.n, dtype=float)
 
         policy_convergence = list()
 
         while True:
+            start_time = time()
             iteration += 1
             # 1- Policy evaluation
             u_0 = u.copy()
@@ -459,7 +464,7 @@ class policy_iteration():
             delta = np.absolute(u - u_0).max()
             policy_convergence.append({'iter': iteration, 'delta': delta})
             if delta < epsilon * (1 - gamma) / gamma: break
-            for s in range(self.env.action_space.n):
+            for s in range(self.env.observation_space.n):
                 if not np.isnan(p[s]) and not p[s] == -1 and not p[s]==10:
                     v = np.zeros((1, self.env.observation_space.n), dtype=float)
                     v[0, s] = 1.0
@@ -471,6 +476,7 @@ class policy_iteration():
         print("Delta: " + str(delta))
         print("Gamma: " + str(gamma))
         print("Epsilon: " + str(epsilon))
+        print("Time to converge: {} seconds".format(time() - start_time))
         print("===================================================")
         utility_reshape = np.reshape(u, (
         int(np.sqrt(self.env.observation_space.n)), int(np.sqrt(self.env.observation_space.n))))
@@ -478,8 +484,6 @@ class policy_iteration():
         print("===================================================")
         self.print_policy(p, shape=(int(np.sqrt(self.env.observation_space.n)), int(np.sqrt(self.env.observation_space.n))))
         print("===================================================")
-
-        print (u)
 
         return p
 
@@ -509,7 +513,7 @@ class policy_iteration():
                 else:
                     action = policy[observation]
                 tot_reward += reward
-        print('Total Reward: {}'.format(tot_reward))
+        print('Avg Policy Reward: {}'.format(tot_reward/100))
         return tot_reward
 
 class q_learner():
@@ -541,7 +545,7 @@ class q_learner():
                 3 - Up
                 '''
                 if not done:
-                    reward = -0.01
+                    reward = -0.04
                 if done and observation != self.env.observation_space.n - 1:
                     reward = -1
                 elif done and observation == self.env.observation_space.n - 1:
@@ -560,20 +564,20 @@ class q_learner():
             observation = self.env.reset()
             done = False
             while not done:
-                self.env.render()
+                # self.env.render()
                 observation, reward, done, info = self.env.step(q_value)
                 q_value = np.argmax(self.qlearner.q_Table[observation])
             tot_reward += reward
-        print ("Q Learner Total Reward: {}".format(tot_reward))
+        print ("Q Learner Total Reward: {}".format(tot_reward/100))
 
-env = gym.make('FrozenLake-v0')
+env = gym.make('FrozenLake-16x16-v0')
 
 # value_policy = value_iteration_mdp(env)
 # value_iter_policy = value_policy.value_iteration()
-#
+# #
 # policy = policy_iteration(env)
 # policy_iter_policy = policy.execute_policy_iteration()
-#
+# #
 # value_reward = value_policy.test_policy(value_iter_policy, value= True)
 # policy_iter_reward = policy.test_policy(policy_iter_policy)
 
