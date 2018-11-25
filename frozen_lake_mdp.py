@@ -174,7 +174,7 @@ class value_iteration_mdp():
         value: array
         """
         #Create a utility function of the environment shape
-        gamma = 0.999
+        gamma = 0.9
         epsilon = 0.01
         iteration = 0
 
@@ -521,12 +521,13 @@ class q_learner():
         self.env = environment
 
         self.qlearner = ql.QLearner(num_states=self.env.observation_space.n,
-                               num_actions=4, dyna=0, verbose=False, rar=0.3, radr=0.99)
+                               num_actions=4, dyna=0, verbose=False, rar=0.9, radr=0.9)
         self.qlearner.alpha = 0.1
 
 
     def train_model(self):
-        for i_episode in range(10000):
+        start_time = time()
+        for i_episode in range(5000):
             old_table = self.qlearner.q_Table.copy()
             observation = self.env.reset()
             start = True
@@ -551,7 +552,7 @@ class q_learner():
                 elif done and observation == self.env.observation_space.n - 1:
                     reward = 1
                 action = self.qlearner.query(observation, reward)
-            print (np.abs(self.qlearner.q_Table - old_table).max())
+        print ("Training time {}".format(time() - start_time))
 
     def test_model(self):
         self.qlearner.num_states = self.env.observation_space.n
@@ -570,19 +571,36 @@ class q_learner():
             tot_reward += reward
         print ("Q Learner Total Reward: {}".format(tot_reward/100))
 
-env = gym.make('FrozenLake-16x16-v0')
+env = gym.make('FrozenLake-v0')
 
-# value_policy = value_iteration_mdp(env)
-# value_iter_policy = value_policy.value_iteration()
-# #
-# policy = policy_iteration(env)
-# policy_iter_policy = policy.execute_policy_iteration()
-# #
-# value_reward = value_policy.test_policy(value_iter_policy, value= True)
-# policy_iter_reward = policy.test_policy(policy_iter_policy)
+value_policy = value_iteration_mdp(env)
+value_iter_policy = value_policy.value_iteration()
+#
+policy = policy_iteration(env)
+policy_iter_policy = policy.execute_policy_iteration()
+#
+value_reward = value_policy.test_policy(value_iter_policy, value= True)
+policy_iter_reward = policy.test_policy(policy_iter_policy)
 
 env_ql = q_learner(env)
 env_ql.train_model()
 env_ql.test_model()
-# print ("Value Iter Reward: {} \n"
-#        "Policy Iter Reward: {}".format(value_reward, policy_iter_reward))
+print ("Value Iter Reward: {} \n"
+       "Policy Iter Reward: {}".format(value_reward, policy_iter_reward))
+
+env = gym.make('FrozenLake-16x16-v0')
+
+value_policy = value_iteration_mdp(env)
+value_iter_policy = value_policy.value_iteration()
+#
+policy = policy_iteration(env)
+policy_iter_policy = policy.execute_policy_iteration()
+#
+value_reward = value_policy.test_policy(value_iter_policy, value= True)
+policy_iter_reward = policy.test_policy(policy_iter_policy)
+
+env_ql = q_learner(env)
+env_ql.train_model()
+env_ql.test_model()
+print ("Value Iter Reward: {} \n"
+       "Policy Iter Reward: {}".format(value_reward, policy_iter_reward))
